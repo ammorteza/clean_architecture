@@ -7,13 +7,13 @@ import (
 	"net/http"
 )
 
-type postController interface {
-	AddPost(w http.ResponseWriter, r *http.Request)
-	GetPosts(w http.ResponseWriter, r *http.Request)
+type userController interface {
+	AddUser(w http.ResponseWriter, r *http.Request)
+	GetUsers(w http.ResponseWriter, r *http.Request)
 }
 
-func (c *controller)AddPost(w http.ResponseWriter, r *http.Request){
-	var input entity.Post
+func (c controller)AddUser(w http.ResponseWriter, r *http.Request){
+	var input entity.User
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil{
 		w.WriteHeader(http.StatusInternalServerError)
@@ -22,13 +22,13 @@ func (c *controller)AddPost(w http.ResponseWriter, r *http.Request){
 	}
 	fmt.Println(input)
 
-	if err := c.service.IsValidPost(&input); err != nil{
+	if err := c.service.IsValidUser(&input); err != nil{
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	err := c.service.CreatePost(&input)
+	err := c.service.RegisterUser(&input)
 	if err != nil{
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -36,16 +36,10 @@ func (c *controller)AddPost(w http.ResponseWriter, r *http.Request){
 	}
 
 	w.WriteHeader(http.StatusOK)
-	//js, err := json.Marshal(res)
-	//if err != nil{
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	w.Write([]byte(err.Error()))
-	//}
-	//w.Write(js)
 }
 
-func (c *controller)GetPosts(w http.ResponseWriter, r *http.Request){
-	res, err := c.service.FetchPosts()
+func (c *controller)GetUsers(w http.ResponseWriter, r *http.Request){
+	res, err := c.service.FetchUsers()
 	if err != nil{
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

@@ -3,28 +3,30 @@ package service
 import (
 	"errors"
 	"github.com/ammorteza/clean_architecture/entity"
-	"github.com/ammorteza/clean_architecture/repository"
-	"math/rand"
 )
-
-var (
-	repo repository.PostRepository
-)
-
-type service struct {}
 
 type PostService interface {
-	Validate(post *entity.Post) error
-	Create(post *entity.Post) (entity.Post, error)
-	FetchAll() ([]entity.Post, error)
+	IsValidPost(post *entity.Post) error
+	CreatePost(post *entity.Post) error
+	FetchPosts() ([]entity.Post, error)
+	MigratePost(post *entity.Post) error
+	ResetPost(post *entity.Post) error
 }
 
-func NewPostService(_repo repository.PostRepository) PostService{
-	repo = _repo
-	return &service{}
+func (s service)MigratePost(post *entity.Post) error{
+	if !s.repo.HasTable(post){
+		if err := s.repo.CreateTable(post); err != nil{
+			return err
+		}
+		if err := s.repo.AddForeignKey(post, "uId", "users(id)", "CASCADE", "CASCADE"); err != nil{
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (*service) Validate(post *entity.Post) error{
+func (*service) IsValidPost(post *entity.Post) error{
 	if post == nil{
 		return errors.New("post is empty!")
 	}
@@ -35,11 +37,20 @@ func (*service) Validate(post *entity.Post) error{
 	return nil
 }
 
-func (*service)Create(post *entity.Post) (entity.Post, error){
-	post.ID = rand.Intn(1000000)
-	return repo.Save(post)
+func (s *service)CreatePost(post *entity.Post) error{
+	//post.ID = rand.Intn(1000000)
+	return s.repo.Create(post)
 }
 
-func (*service)FetchAll() ([]entity.Post, error){
-	return repo.FetchAll()
+func (s *service)FetchPosts() (res []entity.Post, err error){
+	err = s.repo.Find(&entity.Post{}, &res)
+	return res, err
+}
+
+func (s *service)ResetPost(post *entity.Post) error{
+	if s.repo.HasTable(post) {
+		return s.repo.DropTable(post)
+	}
+
+	return nil
 }

@@ -1,13 +1,14 @@
-package router
+package gin
 
 import (
+	"github.com/ammorteza/clean_architecture/http"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
 type ginRouter struct {}
 
-func NewGinRouter() Router{
+func New() router.Router {
 	return &ginRouter{}
 }
 
