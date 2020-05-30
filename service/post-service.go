@@ -26,7 +26,7 @@ func (s service)MigratePost(post *entity.Post) error{
 	return nil
 }
 
-func (*service) IsValidPost(post *entity.Post) error{
+func (service) IsValidPost(post *entity.Post) error{
 	if post == nil{
 		return errors.New("post is empty!")
 	}
@@ -37,17 +37,17 @@ func (*service) IsValidPost(post *entity.Post) error{
 	return nil
 }
 
-func (s *service)CreatePost(post *entity.Post) error{
+func (s service)CreatePost(post *entity.Post) error{
 	//post.ID = rand.Intn(1000000)
 	return s.repo.Create(post)
 }
 
-func (s *service)FetchPosts() (res []entity.Post, err error){
+func (s service)FetchPosts() (res []entity.Post, err error){
 	err = s.repo.Find(&entity.Post{}, &res)
 	return res, err
 }
 
-func (s *service)ResetPost(post *entity.Post) error{
+func (s service)ResetPost(post *entity.Post) error{
 	if s.repo.HasTable(post) {
 		return s.repo.DropTable(post)
 	}

@@ -10,17 +10,19 @@ type UserService interface {
 	MigrateUser(user *entity.User) error
 	ResetUser(user *entity.User) error
 	RegisterUser(user *entity.User) error
+	UpdateUser(user *entity.User) error
+	FirstUser(res *entity.User) error
 	FetchUsers() (res []entity.User, err error)
 }
 
-func (s *service)MigrateUser(user *entity.User) error{
+func (s service)MigrateUser(user *entity.User) error{
 	if !s.repo.HasTable(user){
 		return s.repo.CreateTable(user)
 	}
 	return nil
 }
 
-func (s *service)ResetUser(user *entity.User) error{
+func (s service)ResetUser(user *entity.User) error{
 	if s.repo.HasTable(user) {
 		return s.repo.DropTable(user)
 	}
@@ -28,15 +30,15 @@ func (s *service)ResetUser(user *entity.User) error{
 	return nil
 }
 
-func (s *service)RegisterUser(user *entity.User) error{
-	if err := s.repo.Create(user); err != nil{
-		return err
-	}
-
-	return nil
+func (s service)RegisterUser(user *entity.User) error{
+	return s.repo.Create(user)
 }
 
-func (*service)IsValidUser(user *entity.User) error{
+func (s service)UpdateUser(user *entity.User) error{
+	return s.repo.Save(user)
+}
+
+func (service)IsValidUser(user *entity.User) error{
 	if user == nil{
 		return errors.New("user is empty!")
 	}
@@ -47,7 +49,11 @@ func (*service)IsValidUser(user *entity.User) error{
 	return nil
 }
 
-func (s *service)FetchUsers() (res []entity.User, err error){
+func (s service)FetchUsers() (res []entity.User, err error){
 	err = s.repo.Find(&entity.User{}, &res)
-	return res, err
+	return
+}
+
+func (s service)FirstUser(res *entity.User) error{
+	return s.repo.First(res)
 }

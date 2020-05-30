@@ -1,6 +1,8 @@
 package gorm
 
 import (
+	"errors"
+	"github.com/nu7hatch/gouuid"
 	"github.com/ammorteza/clean_architecture/entity"
 	"github.com/ammorteza/clean_architecture/repository"
 	"github.com/jinzhu/gorm"
@@ -8,8 +10,19 @@ import (
 	"log"
 )
 
+var (
+	txConnections 		map[string]*gorm.DB
+)
+
 type repo struct {
-	dbConn 		*gorm.DB
+	dbConn 				*gorm.DB
+	txConn				*gorm.DB
+	currentTx			repository.Tx
+	txEnable 			bool
+}
+
+func init(){
+	txConnections = make(map[string]*gorm.DB)
 }
 
 func New() repository.DbRepository {
@@ -18,37 +31,118 @@ func New() repository.DbRepository {
 		log.Fatal(err)
 	}
 	return &repo{
-		db,
+		dbConn: db,
+		txEnable: false,
 	}
 }
 
-func (*repo)SavePost(post *entity.Post) error{
+func (r repo)WithTx(tx repository.Tx) repository.DbRepository{
+	txConn, ok := txConnections[tx.ID]
+	if !ok{
+		panic("txConnection id does not exist")
+	}
+	temp := r
+	temp.txEnable = true
+	temp.txConn = txConn
+	temp.currentTx = tx
+	return temp
+}
+
+func (r repo)getConn() *gorm.DB{
+	if r.txEnable{
+		return r.txConn
+	}
+
+	return r.dbConn
+}
+
+func (r repo)closeTx() error{
+	_, ok := txConnections[r.currentTx.ID]
+	if !ok{
+		return errors.New("tx connection does not exist")
+	}
+
+	delete(txConnections, r.currentTx.ID)
 	return nil
 }
 
-func (r *repo)Find(model interface{}, res interface{}) error{
-	return r.dbConn.Model(&model).Find(res).Error
+func (repo)SavePost(post *entity.Post) error{
+	return nil
+}
+
+func (r repo)Find(model interface{}, res interface{}) error{
+	return r.getConn().Model(&model).Find(res).Error
 }
 
 func (r repo)Create(table interface{}) error{
-	return r.dbConn.Create(table).Error
+	return r.getConn().Create(table).Error
+}
+
+func (r repo)First(res interface{}) error{
+	return r.getConn().First(res).Error
+}
+
+func (r repo)Save(model interface{}) error{
+	return r.getConn().Save(model).Error
 }
 
 func (r repo)HasTable(table interface{}) bool{
-	return r.dbConn.HasTable(table)
+	return r.getConn().HasTable(table)
 }
 
 func (r repo)CreateTable(table interface{}) error{
-	return r.dbConn.CreateTable(table).Error
+	return r.getConn().CreateTable(table).Error
 }
 
 func (r repo)ResetTable(table interface{}) error{
-	return r.dbConn.DropTable(table).Error
+	return r.getConn().DropTable(table).Error
 }
 
 func (r repo)DropTable(table interface{}) error {
-	return r.dbConn.DropTable(table).Error
+	return r.getConn().DropTable(table).Error
 }
 func (r repo)AddForeignKey(model interface{}, field, dest, onDelete, onUpdate string) error{
-	return r.dbConn.Model(model).AddForeignKey(field, dest, onDelete, onUpdate).Error
+	return r.getConn().Model(model).AddForeignKey(field, dest, onDelete, onUpdate).Error
+}
+
+func (r repo)Begin() (repository.Tx, error){
+	id, err := uuid.NewV4()
+	if err != nil{
+		return repository.Tx{}, err
+	}
+
+	txConn := r.dbConn.Begin()
+	if txConn.Error != nil{
+		return repository.Tx{}, txConn.Error
+	}
+
+	txConnections[id.String()] = txConn
+	tx := repository.Tx{
+		ID: id.String(),
+	}
+	return tx, nil
+}
+
+func (r repo)Rollback() error{
+	if err := r.getConn().Rollback().Error; err != nil{
+		return err
+	}
+
+	if err := r.closeTx(); err != nil{
+		return err
+	}
+
+	return nil
+}
+
+func (r repo)Commit() error{
+	if err := r.getConn().Commit().Error; err != nil{
+		return err
+	}
+
+	if err := r.closeTx(); err != nil{
+		return err
+	}
+
+	return nil
 }

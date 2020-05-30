@@ -1,9 +1,9 @@
 package entity
 
 type User struct {
-    ID        		    uint 			`gorm:"primary_key"`
-	Name 				string			`gorm:"column:name"json:"name"`
-	CommentCount		uint			`gorm:"column:commentCount"json:"comment_count"`
+    ID        		    uint 			`sql:"primary_key"`
+	Name 				string			`sql:"column:name"json:"name"`
+	CommentCount		uint			`sql:"column:commentCount"json:"comment_count"`
     
-    Posts    			[]Post 			`gorm:"foreignkey:fId"json:"posts"`
+    Posts    			[]Post 			`sql:"foreignkey:fId"json:"posts"`
 }

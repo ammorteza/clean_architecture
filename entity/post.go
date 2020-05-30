@@ -1,9 +1,9 @@
 package entity
 
 type Post struct {
-	ID        		    uint 			`gorm:"primary_key"`
-	Comment 			string 			`gorm:"column:comment"json:"comment"`
+	ID        		    uint 			`sql:"primary_key"`
+	Comment 			string 			`sql:"column:comment;unique"json:"comment"`
 	
-	UserId 				uint			`gorm:"column:uId;foreignkey:uId"json:"uId"`
+	UserId 				uint			`sql:"column:uId;foreignkey:uId"json:"uId"`
 	Users				User			`json:"users"`	
 }
