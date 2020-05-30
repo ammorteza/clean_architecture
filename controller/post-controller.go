@@ -27,48 +27,35 @@ func (c *controller)AddPost(w http.ResponseWriter, r *http.Request){
 	}
 	//////////////// begin transaction ///////////////////////
 	tx, err := c.service.BeginTx()
+	if err != nil{
+		panic(err.Error())
+	}
+	txService := c.service.WithTx(tx)
 	defer func() {
 		if r := recover(); r != nil{
-			c.service.WithTx(tx).RollbackTx()
+			txService.RollbackTx()
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			w.Write([]byte(r.(string)))
 			return
 		}
 	}()
-	if err != nil{
-		c.service.WithTx(tx).RollbackTx()
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
 
 	var userInfo = entity.User{ID: input.UserId}
-	if err := c.service.WithTx(tx).FirstUser(&userInfo); err != nil{
-		c.service.WithTx(tx).RollbackTx()
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+	if err := txService.FirstUser(&userInfo); err != nil{
+		panic(err.Error())
 	}
 
 	userInfo.CommentCount += 1
-	if err := c.service.WithTx(tx).UpdateUser(&userInfo); err != nil{
-		c.service.WithTx(tx).RollbackTx()
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+	if err := txService.UpdateUser(&userInfo); err != nil{
+		panic(err.Error())
 	}
 
-	if err := c.service.WithTx(tx).CreatePost(&input); err != nil{
-		c.service.WithTx(tx).RollbackTx()
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+	if err := txService.CreatePost(&input); err != nil{
+		panic(err.Error())
 	}
 
-	if err := c.service.WithTx(tx).CommitTx(); err != nil{
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+	if err := txService.CommitTx(); err != nil{
+		panic(err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
